@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Venda } from '../../types/Venda';
 
 interface Produto {
   id: number;
@@ -31,22 +32,6 @@ interface ProdutoAvulsoModal {
 interface FormaPagamentoSplit {
   tipo: string;
   valor: number;
-}
-
-interface Venda {
-  id: string;
-  data: string;
-  itens: ItemPedido[];
-  total: number;
-  formaPagamento: string;
-  taxas?: {
-    tipo: string;
-    percentual: number;
-    valor: number;
-  }[];
-  valorLiquido?: number;
-  acrescimoAlimentacao?: number;
-  status: 'CONCLUIDO' | 'CANCELADO';
 }
 
 interface PesoModal {

@@ -1,11 +1,5 @@
 import { create } from 'zustand';
-
-export type Venda = {
-  id: string;
-  categoria: string;
-  valor: number;
-  criadoEm: any;
-};
+import { Venda } from '../src/types/Venda';
 
 interface VendasStore {
   vendas: Venda[];

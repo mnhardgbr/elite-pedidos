@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { Venda } from '../../types/Venda';
 
 interface Movimentacao {
   id: string;
@@ -39,13 +40,6 @@ interface ResumoFinanceiro {
   custos: number;
   lucro: number;
   saldoAtual: number;
-}
-
-interface Venda {
-  id: string;
-  data: string;
-  formaPagamento: string;
-  total: number;
 }
 
 export default function ControleFinanceiro() {
@@ -258,11 +252,11 @@ export default function ControleFinanceiro() {
     let somaFaturamento = 0;
     let somaIfood = 0;
     vendasPeriodo.forEach(venda => {
-      const tipo = venda.formaPagamento.toLowerCase();
+      const tipo = (venda.formaPagamento || '').toLowerCase();
       if (tipo.includes('pago pelo app') || tipo.includes('ifood')) {
-        somaIfood += venda.total;
+        somaIfood += (venda.total || 0);
       } else {
-        somaFaturamento += venda.total;
+        somaFaturamento += (venda.total || 0);
       }
     });
     setFaturamento(somaFaturamento);
@@ -369,15 +363,15 @@ export default function ControleFinanceiro() {
       const dataStr = data.toLocaleDateString('pt-BR');
       if (!vendasPorDia[dataStr]) vendasPorDia[dataStr] = {mesas: 0, delivery: 0, balcao: 0};
       // Classificação simples: se formaPagamento contém 'app' ou 'ifood' ignora, se descrição/formaPagamento contém 'delivery' soma em delivery, se não houver mesa, soma em balcão, senão mesa
-      const tipo = venda.formaPagamento.toLowerCase();
+      const tipo = (venda.formaPagamento || '').toLowerCase();
       if (tipo.includes('pago pelo app') || tipo.includes('ifood')) return;
       // Aqui você pode melhorar a lógica para identificar delivery/mesa/balcao
-      if (venda.formaPagamento.toLowerCase().includes('delivery')) {
-        vendasPorDia[dataStr].delivery += venda.total;
-      } else if (venda.formaPagamento.toLowerCase().includes('mesa')) {
-        vendasPorDia[dataStr].mesas += venda.total;
+      if ((venda.formaPagamento || '').toLowerCase().includes('delivery')) {
+        vendasPorDia[dataStr].delivery += (venda.total || 0);
+      } else if ((venda.formaPagamento || '').toLowerCase().includes('mesa')) {
+        vendasPorDia[dataStr].mesas += (venda.total || 0);
       } else {
-        vendasPorDia[dataStr].balcao += venda.total;
+        vendasPorDia[dataStr].balcao += (venda.total || 0);
       }
     });
 
@@ -586,6 +580,44 @@ export default function ControleFinanceiro() {
     if (periodoSelecionado === 'periodo') return 'do Período';
     return '';
   };
+
+  // Função para calcular dias úteis (segunda a sábado) no mês
+  function diasUteisNoMes(ano: number, mes: number) {
+    let dias = 0;
+    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    for (let dia = 1; dia <= ultimoDia; dia++) {
+      const data = new Date(ano, mes, dia);
+      const diaSemana = data.getDay();
+      if (diaSemana >= 1 && diaSemana <= 6) { // 1=segunda, 6=sábado
+        dias++;
+      }
+    }
+    return dias;
+  }
+
+  const [faturamentoMedio, setFaturamentoMedio] = useState<number>(() => {
+    const saved = localStorage.getItem('faturamentoMedio');
+    return saved ? Number(saved) : 500;
+  });
+  const [gastoMedio, setGastoMedio] = useState<number>(() => {
+    const saved = localStorage.getItem('gastoMedio');
+    return saved ? Number(saved) : 350;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('faturamentoMedio', String(faturamentoMedio));
+  }, [faturamentoMedio]);
+  useEffect(() => {
+    localStorage.setItem('gastoMedio', String(gastoMedio));
+  }, [gastoMedio]);
+
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  const diasUteis = diasUteisNoMes(ano, mes);
+  const faturamentoProjetado = diasUteis * faturamentoMedio;
+  const despesasProjetadas = diasUteis * gastoMedio;
+  const lucroProjetado = faturamentoProjetado - despesasProjetadas;
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -819,6 +851,55 @@ export default function ControleFinanceiro() {
           <button className="bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-600">
             Imprimir Relatório
           </button>
+        </div>
+
+        {/* Projeção Mensal */}
+        <div className="bg-blue-50 rounded-lg shadow-sm p-4 mt-6 mb-6">
+          <h2 className="text-lg font-medium text-blue-800 mb-2">Projeção do Mês</h2>
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <div className="text-sm text-gray-600">Faturamento Projetado</div>
+              <div className="text-xl font-bold text-blue-600">R$ {faturamentoProjetado.toFixed(2)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Despesas Projetadas</div>
+              <div className="text-xl font-bold text-red-600">R$ {despesasProjetadas.toFixed(2)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Lucro Projetado</div>
+              <div className="text-xl font-bold text-green-600">R$ {lucroProjetado.toFixed(2)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Dias Úteis</div>
+              <div className="text-xl font-bold">{diasUteis}</div>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-700">
+            <strong>Observação:</strong> Projeção baseada em faturamento médio diário de R$ 500,00 e gasto médio diário de R$ 350,00 (segunda a sábado).
+          </div>
+          {/* Inputs para simulação */}
+          <div className="flex gap-4 mb-4">
+            <div>
+              <label className="block text-sm text-gray-700">Faturamento médio diário</label>
+              <input
+                type="number"
+                className="border rounded px-2 py-1 w-32"
+                value={faturamentoMedio}
+                onChange={e => setFaturamentoMedio(Number(e.target.value))}
+                min={0}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700">Gasto médio diário</label>
+              <input
+                type="number"
+                className="border rounded px-2 py-1 w-32"
+                value={gastoMedio}
+                onChange={e => setGastoMedio(Number(e.target.value))}
+                min={0}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

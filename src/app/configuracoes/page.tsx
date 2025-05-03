@@ -54,11 +54,17 @@ export default function ConfiguracoesPage() {
   const [duplicadosNome, setDuplicadosNome] = useState<{[key: string]: Produto[]}>({});
   const [duplicadosCodigo, setDuplicadosCodigo] = useState<{[key: string]: Produto[]}>({});
   const [mostrarCafes, setMostrarCafes] = useState(false);
+  const [periodoSelecionado, setPeriodoSelecionado] = useState('semana');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [vendas, setVendas] = useState<any[]>([]);
 
   useEffect(() => {
     carregarCategorias();
     carregarProdutos();
     verificarProdutosDuplicados();
+    const vendasSalvas = localStorage.getItem('vendas');
+    if (vendasSalvas) setVendas(JSON.parse(vendasSalvas));
   }, []);
 
   const carregarCategorias = async () => {
@@ -102,11 +108,16 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  // Função para gerar id único
+  function gerarIdUnico() {
+    return Date.now() + Math.floor(Math.random() * 10000);
+  }
+
   const adicionarProduto = (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const novoProdutoObj: Produto = {
-        id: Date.now(),
+        id: gerarIdUnico(),
         nome: novoProduto.nome,
         categoria: novoProduto.categoria,
         preco: parseFloat(novoProduto.preco),
@@ -152,16 +163,19 @@ export default function ConfiguracoesPage() {
         }
       }
 
+      // Atualizar o produto na lista (substituir pelo id)
       const produtosAtualizados = produtos.map(p => 
         p.id === produtoEditando.id ? {
           ...produtoEditando,
           preco: parseFloat(produtoEditando.preco.toString()),
-          codigobarra: produtoEditando.codigobarra || ''
+          codigobarra: produtoEditando.codigobarra || '',
+          id: p.id // garantir que o id original seja mantido
         } : p
       );
-      const produtosLimpos = limparDuplicadosAuto(produtosAtualizados);
-      localStorage.setItem('produtos', JSON.stringify(produtosLimpos));
-      setProdutos(produtosLimpos);
+      // NÃO adicionar produto novo, apenas atualizar
+      // const produtosLimpos = limparDuplicadosAuto(produtosAtualizados); // Se quiser manter a limpeza
+      localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+      setProdutos(produtosAtualizados);
       setModalProduto(false);
       setProdutoEditando(null);
       window.dispatchEvent(new CustomEvent('produtosAtualizados'));
@@ -268,7 +282,7 @@ export default function ConfiguracoesPage() {
         }
 
         const produto = {
-          id: Date.now(),
+          id: gerarIdUnico(),
           nome: row.produto.toString().trim(),
           categoria: row.categoria.toString().trim(),
           preco: preco,
@@ -535,6 +549,53 @@ export default function ConfiguracoesPage() {
     });
   };
 
+  // Função para filtrar vendas pelo período
+  function filtrarVendasPorPeriodo(vendas: any[]) {
+    let inicio = new Date();
+    let fim = new Date();
+    if (periodoSelecionado === 'hoje') {
+      inicio.setHours(0,0,0,0);
+      fim = new Date(inicio);
+      fim.setDate(fim.getDate() + 1);
+    } else if (periodoSelecionado === 'mes') {
+      inicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0, 0);
+      fim = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (periodoSelecionado === 'semana') {
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      inicio = new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+      fim = new Date(inicio);
+      fim.setDate(fim.getDate() + 6);
+      fim.setHours(23,59,59,999);
+    } else if (periodoSelecionado === 'periodo' && dataInicio && dataFim) {
+      const [iy, im, id] = dataInicio.split('-').map(Number);
+      const [fy, fm, fd] = dataFim.split('-').map(Number);
+      inicio = new Date(iy, im - 1, id, 0, 0, 0, 0);
+      fim = new Date(fy, fm - 1, fd, 23, 59, 59, 999);
+    }
+    return vendas.filter(venda => {
+      const dataVenda = new Date(Number(venda.data));
+      return dataVenda >= inicio && dataVenda <= fim;
+    });
+  }
+
+  // Função para calcular total vendido de um produto no período
+  function totalVendido(produto: Produto) {
+    const vendasPeriodo = filtrarVendasPorPeriodo(vendas);
+    return vendasPeriodo.reduce((total, venda) => {
+      return total + (venda.itens?.filter((item: any) => {
+        // Buscar por código de barras se existir, senão por id
+        if (produto.codigobarra && item.produto.codigobarra) {
+          return item.produto.codigobarra === produto.codigobarra;
+        } else {
+          return item.produto.id === produto.id;
+        }
+      })
+        .reduce((soma: number, item: any) => soma + item.quantidade, 0) || 0);
+    }, 0);
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -620,6 +681,44 @@ export default function ConfiguracoesPage() {
               </div>
             )}
 
+            <div className="flex gap-4 mb-4 items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Período:</label>
+                <select 
+                  className="border rounded-md px-3 py-1.5 text-sm"
+                  value={periodoSelecionado}
+                  onChange={e => setPeriodoSelecionado(e.target.value)}
+                >
+                  <option value="hoje">Hoje</option>
+                  <option value="semana">Esta Semana</option>
+                  <option value="mes">Este Mês</option>
+                  <option value="periodo">Período Específico</option>
+                </select>
+              </div>
+              {periodoSelecionado === 'periodo' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Início:</label>
+                    <input
+                      type="date"
+                      className="border rounded-md px-3 py-1.5 text-sm"
+                      value={dataInicio}
+                      onChange={e => setDataInicio(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Fim:</label>
+                    <input
+                      type="date"
+                      className="border rounded-md px-3 py-1.5 text-sm"
+                      value={dataFim}
+                      onChange={e => setDataFim(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -629,6 +728,7 @@ export default function ConfiguracoesPage() {
                     <th className="px-3 py-2 text-left">Tipo</th>
                     <th className="px-3 py-2 text-left">Categoria</th>
                     <th className="px-3 py-2 text-left">Código de Barras</th>
+                    <th className="px-3 py-2 text-left">Vendas</th>
                     <th className="px-3 py-2 text-left">Ações</th>
                   </tr>
                 </thead>
@@ -640,6 +740,7 @@ export default function ConfiguracoesPage() {
                       <td className="px-3 py-2">{produto.tipovenda}</td>
                       <td className="px-3 py-2">{produto.categoria}</td>
                       <td className="px-3 py-2">{produto.codigobarra || '-'}</td>
+                      <td className="px-3 py-2 font-bold">{totalVendido(produto)} {produto.tipovenda === 'kg' ? 'kg' : 'un'}</td>
                       <td className="px-3 py-2">
                         <button
                           onClick={() => {

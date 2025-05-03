@@ -2,26 +2,7 @@ import { useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useVendasStore } from '../stores/useVendasStore';
-
-export interface ItemPedido {
-  produto: {
-    id: number;
-    nome: string;
-    preco: number;
-    tipovenda: string;
-    peso?: number;
-  };
-  quantidade: number;
-}
-
-export interface Venda {
-  id: string;
-  data: string;
-  itens: ItemPedido[];
-  total: number;
-  formaPagamento: string;
-  status: 'CONCLUIDO' | 'CANCELADO';
-}
+import { Venda, ItemPedido } from '../src/types/Venda';
 
 export const useVendasSync = () => {
   const setVendas = useVendasStore((state) => state.setVendas);

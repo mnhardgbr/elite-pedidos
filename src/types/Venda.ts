@@ -2,6 +2,7 @@ export interface ItemPedido {
   produto: {
     id: number;
     nome: string;
+    categoria: string;
     preco: number;
     tipovenda: string;
     peso?: number;

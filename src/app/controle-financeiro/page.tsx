@@ -194,15 +194,17 @@ export default function ControleFinanceiro() {
 
   // Função para carregar vendas do localStorage
   const carregarVendas = () => {
-    try {
-      const vendasSalvas = localStorage.getItem('vendas');
-      if (vendasSalvas) {
-        setVendas(JSON.parse(vendasSalvas));
-      } else {
+    if (typeof window !== 'undefined') {
+      try {
+        const vendasSalvas = localStorage.getItem('vendas');
+        if (vendasSalvas) {
+          setVendas(JSON.parse(vendasSalvas));
+        } else {
+          setVendas([]);
+        }
+      } catch {
         setVendas([]);
       }
-    } catch {
-      setVendas([]);
     }
   };
 
@@ -618,6 +620,16 @@ export default function ControleFinanceiro() {
   const faturamentoProjetado = diasUteis * faturamentoMedio;
   const despesasProjetadas = diasUteis * gastoMedio;
   const lucroProjetado = faturamentoProjetado - despesasProjetadas;
+
+  const exportarVendas = () => {
+    if (typeof window === 'undefined') return;
+    const vendasSalvas = localStorage.getItem('vendas');
+    if (!vendasSalvas) {
+      alert('Nenhuma venda encontrada para exportar.');
+      return;
+    }
+    // ... rest of the function ...
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">

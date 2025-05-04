@@ -60,16 +60,18 @@ export default function ConfiguracoesPage() {
   const [vendas, setVendas] = useState<any[]>([]);
 
   useEffect(() => {
-    carregarCategorias();
-    carregarProdutos();
-    verificarProdutosDuplicados();
-    const vendasSalvas = localStorage.getItem('vendas');
-    if (vendasSalvas) setVendas(JSON.parse(vendasSalvas));
+    if (typeof window !== 'undefined') {
+      carregarCategorias();
+      carregarProdutos();
+      verificarProdutosDuplicados();
+      const vendasSalvas = localStorage.getItem('vendas');
+      if (vendasSalvas) setVendas(JSON.parse(vendasSalvas));
+    }
   }, []);
 
   const carregarCategorias = async () => {
     try {
-      // Carregar do localStorage
+      if (typeof window === 'undefined') return;
       const categoriasSalvas = localStorage.getItem('categorias');
       if (categoriasSalvas) {
         setCategorias(JSON.parse(categoriasSalvas));
@@ -81,6 +83,7 @@ export default function ConfiguracoesPage() {
 
   const carregarProdutos = async () => {
     try {
+      if (typeof window === 'undefined') return;
       const produtosSalvos = localStorage.getItem('produtos');
       if (produtosSalvos) {
         const produtosData = JSON.parse(produtosSalvos) as Produto[];
@@ -100,7 +103,9 @@ export default function ConfiguracoesPage() {
       };
 
       const novasCategorias = [...categorias, novaCategoriaObj];
-      localStorage.setItem('categorias', JSON.stringify(novasCategorias));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('categorias', JSON.stringify(novasCategorias));
+      }
       setCategorias(novasCategorias);
       setNovaCategoria('');
     } catch (error) {
@@ -129,7 +134,9 @@ export default function ConfiguracoesPage() {
       const novaLista = [...produtos, novoProdutoObj];
       const produtosLimpos = limparDuplicadosAuto(novaLista);
       setProdutos(produtosLimpos);
-      localStorage.setItem('produtos', JSON.stringify(produtosLimpos));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('produtos', JSON.stringify(produtosLimpos));
+      }
       setModalProduto(false);
       setNovoProduto({
         nome: '',
@@ -174,7 +181,9 @@ export default function ConfiguracoesPage() {
       );
       // NÃO adicionar produto novo, apenas atualizar
       // const produtosLimpos = limparDuplicadosAuto(produtosAtualizados); // Se quiser manter a limpeza
-      localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+      }
       setProdutos(produtosAtualizados);
       setModalProduto(false);
       setProdutoEditando(null);
@@ -190,7 +199,9 @@ export default function ConfiguracoesPage() {
     try {
       setProdutos(prevProdutos => {
         const produtosAtualizados = prevProdutos.filter(p => p.id !== id);
-        localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+        }
         return produtosAtualizados;
       });
     } catch (error) {
@@ -203,7 +214,9 @@ export default function ConfiguracoesPage() {
     
     try {
       // Limpar localStorage
-      localStorage.removeItem('produtos');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('produtos');
+      }
       // Atualizar estado
       setProdutos([]);
       // Disparar evento de atualização
@@ -244,8 +257,12 @@ export default function ConfiguracoesPage() {
       let errors: string[] = [];
 
       // Carregar dados existentes
-      const produtosExistentes = JSON.parse(localStorage.getItem('produtos') || '[]');
-      const categoriasExistentes = JSON.parse(localStorage.getItem('categorias') || '[]');
+      let produtosExistentes: Produto[] = [];
+      let categoriasExistentes: Categoria[] = [];
+      if (typeof window !== 'undefined') {
+        produtosExistentes = JSON.parse(localStorage.getItem('produtos') || '[]');
+        categoriasExistentes = JSON.parse(localStorage.getItem('categorias') || '[]');
+      }
 
       for (const row of jsonData) {
         if (!row.produto || !row.categoria) {
@@ -297,8 +314,10 @@ export default function ConfiguracoesPage() {
       }
 
       // Salvar no localStorage
-      localStorage.setItem('categorias', JSON.stringify(categoriasExistentes));
-      localStorage.setItem('produtos', JSON.stringify(produtosExistentes));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('categorias', JSON.stringify(categoriasExistentes));
+        localStorage.setItem('produtos', JSON.stringify(produtosExistentes));
+      }
 
       // Atualizar o estado
       setCategorias(categoriasExistentes);
@@ -339,9 +358,12 @@ export default function ConfiguracoesPage() {
 
   // Função para sincronizar dados entre páginas
   const sincronizarDados = () => {
-    const produtosAtualizados = JSON.parse(localStorage.getItem('produtos') || '[]');
-    const categoriasAtualizadas = JSON.parse(localStorage.getItem('categorias') || '[]');
-    
+    let produtosAtualizados: Produto[] = [];
+    let categoriasAtualizadas: Categoria[] = [];
+    if (typeof window !== 'undefined') {
+      produtosAtualizados = JSON.parse(localStorage.getItem('produtos') || '[]');
+      categoriasAtualizadas = JSON.parse(localStorage.getItem('categorias') || '[]');
+    }
     setProdutos(produtosAtualizados);
     setCategorias(categoriasAtualizadas);
   };
@@ -361,6 +383,7 @@ export default function ConfiguracoesPage() {
 
   // Função para verificar produtos duplicados ou com possíveis erros
   const verificarProdutosDuplicados = () => {
+    if (typeof window === 'undefined') return;
     const produtosSalvos = localStorage.getItem('produtos');
     if (!produtosSalvos) return;
 
@@ -421,7 +444,9 @@ export default function ConfiguracoesPage() {
     const produtosAtualizados = produtos.map((p: Produto) => 
       p.id === produtoId ? {...p, preco: novoPreco} : p
     );
-    localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+    }
     setProdutos(produtosAtualizados);
     window.dispatchEvent(new CustomEvent('produtosAtualizados'));
   };
@@ -475,7 +500,9 @@ export default function ConfiguracoesPage() {
       codigobarra: gerarCodigoBarrasAutomatico(produto)
     }));
 
-    localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('produtos', JSON.stringify(produtosAtualizados));
+    }
     setProdutos(produtosAtualizados);
     window.dispatchEvent(new CustomEvent('produtosAtualizados'));
     
@@ -511,7 +538,9 @@ export default function ConfiguracoesPage() {
       console.log('Produtos removidos:', produtos.length - produtosLimpos.length);
 
       // Atualizar localStorage e estado
-      localStorage.setItem('produtos', JSON.stringify(produtosLimpos));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('produtos', JSON.stringify(produtosLimpos));
+      }
       setProdutos(produtosLimpos);
       
       // Disparar evento de atualização

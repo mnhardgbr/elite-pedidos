@@ -10,6 +10,12 @@ export interface ItemPedido {
   quantidade: number;
 }
 
+export interface TaxaPagamento {
+  tipo: string;
+  percentual: number;
+  valor: number;
+}
+
 export interface Venda {
   id: string;
   categoria?: string;
@@ -20,4 +26,7 @@ export interface Venda {
   total?: number;
   formaPagamento?: string;
   status?: 'CONCLUIDO' | 'CANCELADO';
+  taxas?: TaxaPagamento[];
+  acrescimoAlimentacao?: number;
+  valorLiquido?: number;
 } 

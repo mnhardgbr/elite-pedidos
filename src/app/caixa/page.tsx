@@ -1552,14 +1552,14 @@ export default function Caixa() {
                             )}
                             {venda.valorLiquido !== undefined && (
                               <div className="text-xs font-medium text-amber-600">
-                                Valor Líquido: R$ {venda.valorLiquido.toFixed(2)}
+                                Valor Líquido: R$ {typeof venda.valorLiquido === 'number' ? venda.valorLiquido.toFixed(2) : '0.00'}
                               </div>
                             )}
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <div className="font-medium whitespace-nowrap">
-                            R$ {venda.total.toFixed(2)}
+                            R$ {typeof venda.total === 'number' ? venda.total.toFixed(2) : '0.00'}
                           </div>
                           <button
                             onClick={() => cancelarVenda(venda.id)}
@@ -1833,7 +1833,7 @@ export default function Caixa() {
                       ))}
                       <div className="text-sm text-gray-500 flex justify-between pt-1">
                         <span>Total pago: R$ {editPagamentoModal.pagamentosDivididos.reduce((total, pag) => total + pag.valor, 0).toFixed(2)}</span>
-                        <span>Restante: R$ {(editPagamentoModal.venda.total - editPagamentoModal.pagamentosDivididos.reduce((total, pag) => total + pag.valor, 0)).toFixed(2)}</span>
+                        <span>Restante: R$ {typeof editPagamentoModal.venda?.total === 'number' ? (editPagamentoModal.venda.total - editPagamentoModal.pagamentosDivididos.reduce((total, pag) => total + pag.valor, 0)).toFixed(2) : '0.00'}</span>
                       </div>
                     </div>
                   )}

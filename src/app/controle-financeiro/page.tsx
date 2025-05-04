@@ -597,21 +597,19 @@ export default function ControleFinanceiro() {
     return dias;
   }
 
-  const [faturamentoMedio, setFaturamentoMedio] = useState<number>(() => {
-    const saved = localStorage.getItem('faturamentoMedio');
-    return saved ? Number(saved) : 500;
-  });
-  const [gastoMedio, setGastoMedio] = useState<number>(() => {
-    const saved = localStorage.getItem('gastoMedio');
-    return saved ? Number(saved) : 350;
-  });
+  // Inicialização segura para SSR
+  const [faturamentoMedio, setFaturamentoMedio] = useState<number>(500);
+  const [gastoMedio, setGastoMedio] = useState<number>(350);
 
+  // Carregar valores do localStorage apenas no client
   useEffect(() => {
-    localStorage.setItem('faturamentoMedio', String(faturamentoMedio));
-  }, [faturamentoMedio]);
-  useEffect(() => {
-    localStorage.setItem('gastoMedio', String(gastoMedio));
-  }, [gastoMedio]);
+    if (typeof window !== 'undefined') {
+      const savedFaturamento = localStorage.getItem('faturamentoMedio');
+      if (savedFaturamento) setFaturamentoMedio(Number(savedFaturamento));
+      const savedGasto = localStorage.getItem('gastoMedio');
+      if (savedGasto) setGastoMedio(Number(savedGasto));
+    }
+  }, []);
 
   const hoje = new Date();
   const ano = hoje.getFullYear();

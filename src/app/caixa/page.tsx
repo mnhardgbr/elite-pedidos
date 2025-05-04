@@ -1103,22 +1103,24 @@ export default function Caixa() {
     };
 
     vendasDia.forEach(venda => {
-      if (venda.formaPagamento.includes('+')) {
+      if (typeof venda.formaPagamento === 'string' && venda.formaPagamento.includes('+')) {
         // Pagamento dividido
         const pagamentos = venda.formaPagamento.split(' + ');
         pagamentos.forEach(pagamento => {
           const [tipoPagamento, valorStr] = pagamento.split(': R$ ');
           const valor = parseFloat(valorStr);
           const tipoLower = tipoPagamento.toLowerCase();
-          if (tipoLower.includes('dinheiro')) resumo.dinheiro += valor;
-          else if (tipoLower.includes('pix')) resumo.pix += valor;
-          else if (tipoLower.includes('débito')) resumo.debito += valor;
-          else if (tipoLower.includes('crédito')) resumo.credito += valor;
-          else if (tipoLower.includes('alimentação')) resumo.alimentacao += valor;
-          else if (tipoLower.includes('pago pelo app') || tipoLower.includes('ifood')) resumo.ifood += valor;
+          if (!isNaN(valor)) {
+            if (tipoLower.includes('dinheiro')) resumo.dinheiro += valor;
+            else if (tipoLower.includes('pix')) resumo.pix += valor;
+            else if (tipoLower.includes('débito')) resumo.debito += valor;
+            else if (tipoLower.includes('crédito')) resumo.credito += valor;
+            else if (tipoLower.includes('alimentação')) resumo.alimentacao += valor;
+            else if (tipoLower.includes('pago pelo app') || tipoLower.includes('ifood')) resumo.ifood += valor;
+          }
         });
-      } else {
-        const valor = venda.total;
+      } else if (typeof venda.formaPagamento === 'string') {
+        const valor = typeof venda.total === 'number' ? venda.total : 0;
         const tipoLower = venda.formaPagamento.toLowerCase();
         if (tipoLower.includes('dinheiro')) resumo.dinheiro += valor;
         else if (tipoLower.includes('pix')) resumo.pix += valor;
@@ -1127,7 +1129,7 @@ export default function Caixa() {
         else if (tipoLower.includes('alimentação')) resumo.alimentacao += valor;
         else if (tipoLower.includes('pago pelo app') || tipoLower.includes('ifood')) resumo.ifood += valor;
       }
-      resumo.total += venda.total;
+      resumo.total += typeof venda.total === 'number' ? venda.total : 0;
     });
 
     return resumo;

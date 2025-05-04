@@ -1529,7 +1529,7 @@ export default function Caixa() {
                             </span>
                           </div>
                           <div className="text-sm">
-                            {venda.itens.map(item => (
+                            {venda.itens?.map(item => (
                               <div key={`${item.produto.id}-${item.produto.nome}-${item.produto.peso}`} className="truncate">
                                 {item.quantidade}x {item.produto.nome}
                                 {item.produto.peso ? ` (${item.produto.peso}g)` : ''}

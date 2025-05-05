@@ -209,8 +209,12 @@ export default function Caixa() {
   ];
   // 2. Estado para modal de preço iFood
   const [ifoodModal, setIfoodModal] = useState<{produto: Produto|null, quantidade: number, preco: number, isOpen: boolean}>({produto: null, quantidade: 1, preco: 0, isOpen: false});
+  // Adicionar estado para valor recebido
+  const [valorRecebido, setValorRecebido] = useState<number>(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  // Adicionar ref para o input de busca
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleClickOutside = useCallback((event: MouseEvent) => {
     // Não faz nada se algum modal estiver aberto
@@ -335,6 +339,7 @@ export default function Caixa() {
   // Carregar produtos do localStorage
   const carregarProdutos = () => {
     try {
+      if (typeof window === 'undefined') return;
       const produtosSalvos = localStorage.getItem('produtos');
       if (!produtosSalvos) {
         setProdutos([]);
@@ -403,6 +408,7 @@ export default function Caixa() {
   // Modificar a função carregarVendas
   const carregarVendas = () => {
     try {
+      if (typeof window === 'undefined') return;
       const vendasSalvas = localStorage.getItem('vendas');
       let vendasCarregadas: Venda[] = [];
 
@@ -611,6 +617,10 @@ export default function Caixa() {
       });
     } else {
       adicionarProduto(produto);
+      setTermoBusca('');
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
     }
   };
 
@@ -971,7 +981,14 @@ export default function Caixa() {
     if (dividirPagamento) {
       const totalPago = calcularTotalPago();
       // Calcular o total dos pedidos da mesa
-      const totalPedidoMesa = mesaAtual.pedidos.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
+      const totalPedidoMesa = mesaAtual.pedidos.reduce((total, item) => {
+        const produto = item.produto;
+        if (produto.tipovenda === 'kg' && produto.peso) {
+          const pesoEmKg = produto.peso / 1000;
+          return total + (produto.preco * pesoEmKg * item.quantidade);
+        }
+        return total + (produto.preco * item.quantidade);
+      }, 0);
       if (Math.abs(totalPago - totalPedidoMesa) > 0.01) {
         alert('O valor total dos pagamentos deve ser igual ao valor do pedido');
         return;
@@ -979,7 +996,14 @@ export default function Caixa() {
     }
 
     // Calcular o total dos pedidos da mesa
-    const totalMesa = mesaAtual.pedidos.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
+    const totalMesa = mesaAtual.pedidos.reduce((total, item) => {
+      const produto = item.produto;
+      if (produto.tipovenda === 'kg' && produto.peso) {
+        const pesoEmKg = produto.peso / 1000;
+        return total + (produto.preco * pesoEmKg * item.quantidade);
+      }
+      return total + (produto.preco * item.quantidade);
+    }, 0);
     console.log('DEBUG PAGAR MESA', { mesaAtual, totalMesa, pagamentosDivididos, formaPagamento });
 
     // Criar nova venda
@@ -1151,6 +1175,11 @@ export default function Caixa() {
     }
   }, [isIfoodPedido, ifoodModal.isOpen]);
 
+  // Opcional: resetar valorRecebido ao finalizar pedido
+  useEffect(() => {
+    if (pedidoAtual.length === 0) setValorRecebido(0);
+  }, [pedidoAtual]);
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -1284,7 +1313,13 @@ export default function Caixa() {
                     placeholder="Digite o código, código de barras ou nome do produto..."
                     value={termoBusca}
                     onChange={handleSearchInput}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && produtosFiltrados.length === 1) {
+                        handleProdutoClick(produtosFiltrados[0]);
+                      }
+                    }}
                     className="w-full pl-10 pr-4 py-2 border rounded"
+                    ref={searchInputRef}
                   />
                   <svg
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"
@@ -1477,9 +1512,33 @@ export default function Caixa() {
                           />
                         </div>
 
+                        {formaPagamento === 'Dinheiro' && (
+                          <div className="mt-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Valor Recebido</label>
+                            <input
+                              type="number"
+                              min={calcularTotalComTaxas()}
+                              step="0.01"
+                              value={valorRecebido || ''}
+                              onChange={e => setValorRecebido(parseFloat(e.target.value) || 0)}
+                              className="w-full p-2 border rounded text-sm"
+                              placeholder={`R$ ${calcularTotalComTaxas().toFixed(2)}`}
+                            />
+                            <div className="text-green-700 font-bold mt-1 text-sm">
+                              Troco: R$ {valorRecebido > 0 ? (valorRecebido - calcularTotalComTaxas()).toFixed(2) : '0.00'}
+                            </div>
+                          </div>
+                        )}
+
                         <button
                           onClick={isIfoodPedido ? finalizarPedido : mesaSelecionada ? finalizarPedidoMesa : finalizarPedido}
-                          disabled={pedidoAtual.length === 0}
+                          disabled={
+                            pedidoAtual.length === 0 ||
+                            (formaPagamento === 'Dinheiro' ? valorRecebido < calcularTotalComTaxas() : false) ||
+                            (dividirPagamento 
+                              ? Math.abs(calcularTotalPago() - calcularTotal()) > 0.01
+                              : !formaPagamento)
+                          }
                           className={`${isIfoodPedido ? 'bg-green-600 hover:bg-green-700' : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800'} w-full mt-2 text-white py-2 rounded font-medium transition-all duration-300 shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed`}
                         >
                           {isIfoodPedido ? 'Finalizar Pedido iFood' : mesaSelecionada ? 'Salvar Pedido na Mesa' : 'Finalizar Pedido'}
@@ -1529,12 +1588,23 @@ export default function Caixa() {
                             </span>
                           </div>
                           <div className="text-sm">
-                            {venda.itens?.map(item => (
-                              <div key={`${item.produto.id}-${item.produto.nome}-${item.produto.peso}`} className="truncate">
-                                {item.quantidade}x {item.produto.nome}
-                                {item.produto.peso ? ` (${item.produto.peso}g)` : ''}
-                              </div>
-                            ))}
+                            {venda.itens?.map(item => {
+                              const produto = item.produto;
+                              let valorTotal = 0;
+                              if (produto.tipovenda === 'kg' && produto.peso) {
+                                const pesoEmKg = produto.peso / 1000;
+                                valorTotal = produto.preco * pesoEmKg * item.quantidade;
+                              } else {
+                                valorTotal = produto.preco * item.quantidade;
+                              }
+                              return (
+                                <div key={`${produto.id}-${produto.nome}-${produto.peso}`} className="truncate">
+                                  {item.quantidade}x {produto.nome}
+                                  {produto.peso ? ` (${produto.peso}g)` : ''}
+                                  {" - R$ " + valorTotal.toFixed(2)}
+                                </div>
+                              );
+                            })}
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
                             <div>Pagamento: {venda.formaPagamento}</div>
@@ -1566,6 +1636,19 @@ export default function Caixa() {
                             className="text-red-600 text-sm hover:text-red-700 mt-1"
                           >
                             Cancelar
+                          </button>
+                          <button
+                            onClick={() => setEditPagamentoModal({
+                              isOpen: true,
+                              venda: venda,
+                              novaFormaPagamento: '',
+                              dividirPagamento: false,
+                              pagamentosDivididos: [],
+                              novoValorPagamento: 0
+                            })}
+                            className="text-blue-600 text-sm hover:text-blue-700 mt-1 ml-2"
+                          >
+                            Editar
                           </button>
                         </div>
                       </div>

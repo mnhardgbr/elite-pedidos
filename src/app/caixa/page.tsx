@@ -661,6 +661,7 @@ export default function Caixa() {
       };
       adicionarProduto(produtoAvulso);
       setProdutoAvulsoModal({ isOpen: false, nome: '', preco: 0, quantidade: 1, observacao: '' });
+      setTermoBusca('');
     }
   };
 
@@ -701,6 +702,10 @@ export default function Caixa() {
       produto: null,
       peso: 0
     });
+    setTermoBusca('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   };
 
   const removerProduto = (item: ItemPedido) => {
@@ -1415,19 +1420,14 @@ export default function Caixa() {
                           </button>
                         </div>
 
-                        {!dividirPagamento ? (
-                          <div className="grid grid-cols-2 gap-2">
+                        {!dividirPagamento && (
+                          <div className="grid grid-cols-2 gap-2 mb-2">
                             {['Dinheiro', 'PIX', 'Cartão de Débito', 'Cartão de Crédito', 'Vale Alimentação'].map((forma) => (
                               <button
                                 key={forma}
-                                onClick={() => {
-                                  setFormaPagamento(forma);
-                                  if (forma === 'Vale Alimentação') {
-                                    const total = calcularTotalComTaxas();
-                                    setNovoValorPagamento(total);
-                                  }
-                                }}
-                                className={`p-2 rounded text-sm ${
+                                type="button"
+                                onClick={() => setFormaPagamento(forma)}
+                                className={`p-2 rounded text-sm w-full ${
                                   formaPagamento === forma
                                     ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md'
                                     : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
@@ -1435,69 +1435,79 @@ export default function Caixa() {
                               >
                                 {forma}
                                 {forma === 'Vale Alimentação' && (
-                                  <span className="block text-xs">
-                                    (+8%)
-                                  </span>
+                                  <span className="block text-xs">(+8%)</span>
                                 )}
                               </button>
                             ))}
                           </div>
-                        ) : (
+                        )}
+
+                        {dividirPagamento && (
                           <div className="space-y-2">
-                            {pagamentosDivididos.map((pagamento, index) => (
-                              <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                                <div className="text-sm">
-                                  <span className="font-medium">{pagamento.tipo}</span>
-                                  <span className="text-gray-500 ml-2">R$ {pagamento.valor.toFixed(2)}</span>
-                                </div>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              {['Dinheiro', 'PIX', 'Cartão de Débito', 'Cartão de Crédito', 'Vale Alimentação'].map((forma) => (
                                 <button
-                                  onClick={() => removerFormaPagamento(index)}
-                                  className="text-red-500 hover:text-red-600 text-sm"
+                                  key={forma}
+                                  type="button"
+                                  onClick={() => setNovaFormaPagamento(forma)}
+                                  className={`p-2 rounded text-sm w-full ${
+                                    novaFormaPagamento === forma
+                                      ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md'
+                                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                  }`}
                                 >
-                                  Remover
+                                  {forma}
+                                  {forma === 'Vale Alimentação' && (
+                                    <span className="block text-xs">(+8%)</span>
+                                  )}
                                 </button>
-                              </div>
-                            ))}
-                            
+                              ))}
+                            </div>
                             <div className="flex gap-2">
-                              <select
-                                value={novaFormaPagamento}
-                                onChange={(e) => {
-                                  setNovaFormaPagamento(e.target.value);
-                                  if (e.target.value === 'Vale Alimentação') {
-                                    const valorRestante = calcularValorRestante();
-                                    setNovoValorPagamento(valorRestante * (1 + ACRESCIMO_ALIMENTACAO));
-                                  }
-                                }}
-                                className="flex-1 p-2 border rounded text-sm"
-                              >
-                                <option value="">Forma de Pagamento</option>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="PIX">PIX</option>
-                                <option value="Cartão de Débito">Cartão de Débito</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="Vale Alimentação">Vale Alimentação (+8%)</option>
-                              </select>
                               <input
                                 type="number"
                                 inputMode="decimal"
                                 step="0.01"
                                 value={novoValorPagamento || ''}
-                                onChange={(e) => setNovoValorPagamento(parseFloat(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const valorBase = parseFloat(e.target.value) || 0;
+                                  setNovoValorPagamento(
+                                    novaFormaPagamento === 'Vale Alimentação' ? Number((valorBase * 1.08).toFixed(2)) : valorBase
+                                  );
+                                }}
                                 placeholder="Valor"
                                 className="flex-1 p-2 border rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                               <button
-                                onClick={() => {
-                                  if (novaFormaPagamento && novoValorPagamento > 0) {
-                                    setNovoValorPagamento(novoValorPagamento);
-                                  }
-                                }}
+                                onClick={adicionarFormaPagamento}
+                                disabled={!novaFormaPagamento || novoValorPagamento <= 0}
                                 className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                               >
                                 Adicionar
                               </button>
                             </div>
+                            {pagamentosDivididos.length > 0 && (
+                              <div className="space-y-1">
+                                {pagamentosDivididos.map((pagamento, index) => (
+                                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                    <div className="text-sm">
+                                      <span className="font-medium">{pagamento.tipo}</span>
+                                      <span className="text-gray-500 ml-2">R$ {pagamento.valor.toFixed(2)}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => removerFormaPagamento(index)}
+                                      className="text-red-500 hover:text-red-600 text-sm"
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="text-sm text-gray-500 flex justify-between pt-1">
+                                  <span>Total pago: R$ {pagamentosDivididos.reduce((total, pag) => total + pag.valor, 0).toFixed(2)}</span>
+                                  <span>Restante: R$ {(calcularTotal() - pagamentosDivididos.reduce((total, pag) => total + pag.valor, 0)).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1534,10 +1544,12 @@ export default function Caixa() {
                           onClick={isIfoodPedido ? finalizarPedido : mesaSelecionada ? finalizarPedidoMesa : finalizarPedido}
                           disabled={
                             pedidoAtual.length === 0 ||
-                            (formaPagamento === 'Dinheiro' ? valorRecebido < calcularTotalComTaxas() : false) ||
-                            (dividirPagamento 
-                              ? Math.abs(calcularTotalPago() - calcularTotal()) > 0.01
-                              : !formaPagamento)
+                            (isIfoodPedido || !mesaSelecionada
+                              ? (formaPagamento === 'Dinheiro' ? valorRecebido < calcularTotalComTaxas() : false) ||
+                                (dividirPagamento 
+                                  ? Math.abs(calcularTotalPago() - calcularTotal()) > 0.01
+                                  : !formaPagamento)
+                              : false)
                           }
                           className={`${isIfoodPedido ? 'bg-green-600 hover:bg-green-700' : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800'} w-full mt-2 text-white py-2 rounded font-medium transition-all duration-300 shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed`}
                         >

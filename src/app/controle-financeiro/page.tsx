@@ -192,6 +192,12 @@ export default function ControleFinanceiro() {
   const [novaAberturaModal, setNovaAberturaModal] = useState(false);
   const [novaAbertura, setNovaAbertura] = useState<{data: string, valor: number}>({data: '', valor: 0});
 
+  // Adicionar estado para ajuste manual do saldo
+  const [ajusteSaldo, setAjusteSaldo] = useState<number>(0);
+
+  // Adicionar estado para mostrar/ocultar ajuste manual
+  const [mostrarAjuste, setMostrarAjuste] = useState(false);
+
   // Função para carregar vendas do localStorage
   const carregarVendas = () => {
     if (typeof window !== 'undefined') {
@@ -295,6 +301,24 @@ export default function ControleFinanceiro() {
         responsavel: novaMov.responsavel!,
       };
       lista = [nova, ...movimentacoes];
+      // Se for entrada e categoria Venda Mesa ou Venda Balcão, criar venda correspondente
+      if (novaMov.tipo === 'entrada' && (novaMov.categoria === 'Venda Mesa' || novaMov.categoria === 'Venda Balcão')) {
+        const novaVenda = {
+          id: Date.now().toString(),
+          data: Date.now().toString(),
+          formaPagamento: novaMov.formaPagamento || novaMov.categoria,
+          total: Number(novaMov.valor)
+        };
+        const vendasSalvas = localStorage.getItem('vendas');
+        let vendasAtualizadas = vendas;
+        if (vendasSalvas) {
+          vendasAtualizadas = JSON.parse(vendasSalvas);
+        }
+        vendasAtualizadas = [novaVenda, ...vendasAtualizadas];
+        setVendas(vendasAtualizadas);
+        localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
+        alert('Movimentação salva e valor incluído no faturamento do dia!');
+      }
     }
     setMovimentacoes(lista);
     localStorage.setItem('movimentacoes', JSON.stringify(lista));
@@ -629,6 +653,19 @@ export default function ControleFinanceiro() {
     // ... rest of the function ...
   };
 
+  // Carregar ajuste do localStorage ao iniciar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedAjuste = localStorage.getItem('ajusteSaldoAtual');
+      if (savedAjuste) setAjusteSaldo(Number(savedAjuste));
+    }
+  }, []);
+
+  // Função para salvar ajuste
+  const salvarAjusteSaldo = () => {
+    localStorage.setItem('ajusteSaldoAtual', ajusteSaldo.toString());
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-[1200px] mx-auto">
@@ -729,8 +766,44 @@ export default function ControleFinanceiro() {
             <div className="text-2xl font-bold text-green-600">R$ {lucro.toFixed(2)}</div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-gray-600">Saldo Atual {textoPeriodo()}</div>
-            <div className="text-2xl font-bold text-purple-600">R$ {saldoAtual.toFixed(2)}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">Saldo Atual {textoPeriodo()}</div>
+              <button
+                className="text-xs text-purple-600 hover:underline ml-2"
+                onClick={() => {
+                  const senha = prompt('Digite a senha de administrador para ajustar o saldo:');
+                  if (senha === 'admin123') {
+                    setMostrarAjuste(true);
+                  } else if (senha !== null) {
+                    alert('Senha incorreta!');
+                  }
+                }}
+              >Ajustar Saldo</button>
+            </div>
+            <div className="text-2xl font-bold text-purple-600 mb-2">R$ {(saldoAtual + ajusteSaldo).toFixed(2)}</div>
+            {mostrarAjuste && (
+              <div className="mt-2 flex items-center gap-2">
+                <label className="text-xs text-purple-500">Ajuste manual:</label>
+                <input
+                  type="number"
+                  value={ajusteSaldo}
+                  onChange={e => setAjusteSaldo(Number(e.target.value) || 0)}
+                  className="w-20 p-1 border rounded text-xs text-right"
+                  step="0.01"
+                />
+                <button
+                  onClick={() => {
+                    salvarAjusteSaldo();
+                    setMostrarAjuste(false);
+                  }}
+                  className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200"
+                >Salvar</button>
+                <button
+                  onClick={() => setMostrarAjuste(false)}
+                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                >Cancelar</button>
+              </div>
+            )}
           </div>
         </div>
 

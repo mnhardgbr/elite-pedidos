@@ -1195,24 +1195,21 @@ export default function Caixa() {
               <Image 
                 src="/images/logo.png" 
                 alt="Logo" 
-                width={50} 
-                height={50} 
+                width={80} 
+                height={80} 
                 className="rounded-lg shadow-2xl hover:shadow-2xl transition-shadow duration-300"
                 style={{ 
                   filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
                   boxShadow: '0 0 15px rgba(0, 0, 0, 0.7)'
                 }}
               />
-              <span 
-                className="text-3xl font-bold bg-gradient-to-r from-amber-700 via-yellow-600 to-amber-600 bg-clip-text text-transparent" 
-                style={{ 
-                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
-                  fontFamily: "'Dancing Script', cursive",
-                  letterSpacing: '0.5px'
-                }}
-              >
-                Panificadora Elite
-              </span>
+              <Image
+                src="/images/Panificadora Elite.png"
+                alt="Panificadora Elite"
+                width={260}
+                height={80}
+                className="ml-2"
+              />
             </div>
             <nav className="flex gap-2">
               {/* Remover o link de Fechamento de Caixa */}

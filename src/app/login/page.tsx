@@ -51,7 +51,7 @@ export default function Login() {
                   src="/images/logo.png"
                   alt="Logo Elite Pedidos"
                   fill
-                  className="object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
+                  className="object-contain"
                   priority
                 />
               </div>

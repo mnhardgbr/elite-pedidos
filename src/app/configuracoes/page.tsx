@@ -612,9 +612,23 @@ export default function ConfiguracoesPage() {
   // Função para calcular total vendido de um produto no período
   function totalVendido(produto: Produto) {
     const vendasPeriodo = filtrarVendasPorPeriodo(vendas);
+    if (produto.tipovenda === 'kg') {
+      // Soma o peso em gramas e converte para kg
+      const totalGramas = vendasPeriodo.reduce((total, venda) => {
+        return total + (venda.itens?.filter((item: any) => {
+          if (produto.codigobarra && item.produto.codigobarra) {
+            return item.produto.codigobarra === produto.codigobarra;
+          } else {
+            return item.produto.id === produto.id;
+          }
+        })
+          .reduce((soma: number, item: any) => soma + ((item.produto.peso || 0) * item.quantidade), 0) || 0);
+      }, 0);
+      return (totalGramas / 1000).toFixed(2); // retorna em kg com 2 casas decimais
+    }
+    // Para unidade, soma normalmente
     return vendasPeriodo.reduce((total, venda) => {
       return total + (venda.itens?.filter((item: any) => {
-        // Buscar por código de barras se existir, senão por id
         if (produto.codigobarra && item.produto.codigobarra) {
           return item.produto.codigobarra === produto.codigobarra;
         } else {
@@ -748,58 +762,92 @@ export default function ConfiguracoesPage() {
               )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-3 py-2 text-left">Nome</th>
-                    <th className="px-3 py-2 text-left">Preço</th>
-                    <th className="px-3 py-2 text-left">Tipo</th>
-                    <th className="px-3 py-2 text-left">Categoria</th>
-                    <th className="px-3 py-2 text-left">Código de Barras</th>
-                    <th className="px-3 py-2 text-left">Vendas</th>
-                    <th className="px-3 py-2 text-left">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {produtos.map((produto) => (
-                    <tr key={produto.id} className="border-t hover:bg-gray-50">
-                      <td className="px-3 py-2">{produto.nome}</td>
-                      <td className="px-3 py-2">R$ {produto.preco.toFixed(2)}</td>
-                      <td className="px-3 py-2">{produto.tipovenda}</td>
-                      <td className="px-3 py-2">{produto.categoria}</td>
-                      <td className="px-3 py-2">{produto.codigobarra || '-'}</td>
-                      <td className="px-3 py-2 font-bold">{totalVendido(produto)} {produto.tipovenda === 'kg' ? 'kg' : 'un'}</td>
-                      <td className="px-3 py-2">
-                        <button
-                          onClick={() => {
-                            setProdutoEditando({
-                              id: produto.id,
-                              nome: produto.nome,
-                              categoria: produto.categoria,
-                              preco: produto.preco,
-                              tipovenda: produto.tipovenda,
-                              codigobarra: produto.codigobarra,
-                              imagem: produto.imagem,
-                              descricao: produto.descricao
-                            });
-                            setModalProduto(true);
-                          }}
-                          className="text-blue-500 hover:text-blue-700 mr-2 text-sm"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => excluirProduto(produto.id)}
-                          className="text-red-500 hover:text-red-700 text-sm"
-                        >
-                          Remover
-                        </button>
-                      </td>
+            <div className="flex gap-8">
+              {/* Tabela de Produtos */}
+              <div className="flex-1 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-3 py-2 text-left">Nome</th>
+                      <th className="px-3 py-2 text-left">Preço</th>
+                      <th className="px-3 py-2 text-left">Tipo</th>
+                      <th className="px-3 py-2 text-left">Categoria</th>
+                      <th className="px-3 py-2 text-left">Código de Barras</th>
+                      <th className="px-3 py-2 text-left">Vendas</th>
+                      <th className="px-3 py-2 text-left">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {produtos.map((produto) => (
+                      <tr key={produto.id} className="border-t hover:bg-gray-50">
+                        <td className="px-3 py-2">{produto.nome}</td>
+                        <td className="px-3 py-2">R$ {produto.preco.toFixed(2)}</td>
+                        <td className="px-3 py-2">{produto.tipovenda}</td>
+                        <td className="px-3 py-2">{produto.categoria}</td>
+                        <td className="px-3 py-2">{produto.codigobarra || '-'}</td>
+                        <td className="px-3 py-2 font-bold">{totalVendido(produto)} {produto.tipovenda === 'kg' ? 'kg' : 'un'}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => {
+                              setProdutoEditando({
+                                id: produto.id,
+                                nome: produto.nome,
+                                categoria: produto.categoria,
+                                preco: produto.preco,
+                                tipovenda: produto.tipovenda,
+                                codigobarra: produto.codigobarra,
+                                imagem: produto.imagem,
+                                descricao: produto.descricao
+                              });
+                              setModalProduto(true);
+                            }}
+                            className="text-blue-500 hover:text-blue-700 mr-2 text-sm"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => excluirProduto(produto.id)}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            Remover
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Ranking dos Mais Vendidos */}
+              <div className="w-80 flex-shrink-0">
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h2 className="text-lg font-semibold mb-2">Ranking Mais Vendidos</h2>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-2 py-1 text-left">#</th>
+                        <th className="px-2 py-1 text-left">Produto</th>
+                        <th className="px-2 py-1 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {produtos
+                        .map(produto => ({
+                          ...produto,
+                          total: parseFloat(totalVendido(produto))
+                        }))
+                        .sort((a, b) => b.total - a.total)
+                        .slice(0, 10)
+                        .map((produto, idx) => (
+                          <tr key={produto.id} className="border-t hover:bg-gray-50">
+                            <td className="px-2 py-1 font-bold">{idx + 1}</td>
+                            <td className="px-2 py-1">{produto.nome}</td>
+                            <td className="px-2 py-1 text-right">{produto.total} {produto.tipovenda === 'kg' ? 'kg' : 'un'}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
